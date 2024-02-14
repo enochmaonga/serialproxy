@@ -2,6 +2,7 @@ const express = require('express');
 const mongoose = require('mongoose');
 const bodyParser = require('body-parser');
 const cors = require('cors');
+require('dotenv').config();
 
 const app = express();
 const port = process.env.PORT || 5000;
@@ -29,6 +30,9 @@ const Submission = mongoose.model('Submission', submissionSchema, 'form');
 // Define routes
 app.use("/newEntry", require("./routes/newEntry"));
 app.use("/formcontent", require("./routes/formcontent"));
+app.use("/login", require("./routes/login"));
+app.use("/users", require("./routes/users"));
+app.use("/fetchusers", require("./routes/fetchusers"));
 
 
 console.log('New entry confirmed' );
