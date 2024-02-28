@@ -1,0 +1,9 @@
+GET http://localhost:5001/form
+
+###
+GET http://localhost:5001/users
+
+GET http://localhost:5001/usershow
+
+
+GET http://localhost:5001/content

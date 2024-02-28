@@ -1,67 +1,58 @@
 const express = require('express');
-const session = require('express-session');
-const passport = require('passport');
-const LocalStrategy = require('passport-local').Strategy;
-const JwtStrategy = require('passport-jwt').Strategy;
-const ExtractJwt = require('passport-jwt').ExtractJwt;
 const jwt = require('jsonwebtoken');
 const router = express.Router();
 const mongoose = require('mongoose');
 const bcrypt = require('bcrypt');
 
-// Add express-session middleware
-router.use(session({
-    secret: 'your-secret-key',  // Replace with your secret key
-    resave: false,
-    saveUninitialized: false,
-  }));
-
 // Define a Mongoose model for your user collection
 const User = mongoose.model('User', {
   username: String,
   password: String,
+  userType: String,
 });
 
-// MongoDB connection setup
-mongoose.connect(process.env.MONGODB_URI, { useNewUrlParser: true, useUnifiedTopology: true });
+mongoose.connect('mongodb://127.0.0.1:27017/kcc', { useNewUrlParser: true, useUnifiedTopology: true });
 
+router.post('/', async (req, res) => {
+  const { username, password } = req.body;
+  console.log("Login", req.body);
+  console.log('Retrieved User:', User);
 
-// Configure Passport with LocalStrategy
-passport.use(new LocalStrategy(async (username, password, done) => {
   try {
+    // Search for the user in the database
     const user = await User.findOne({ username: { $regex: new RegExp(username, 'i') } });
+    console.log('User Data:', user);
 
     if (!user) {
-      return done(null, false, { message: 'User not found' });
+      res.status(401).json({ message: 'User not found' });
+      return;
     }
 
+    // Check if the provided password matches the stored hashed password
     const passwordMatch = await bcrypt.compare(password, user.password);
+    console.log('Entered Password:', password);
+    console.log('Stored Password:', user.password);
+    console.log('Password Match:', passwordMatch);
 
     if (passwordMatch) {
-      return done(null, user);
+      // Generate a JWT token and send it back to the client
+      const token = jwt.sign({ username: user.username, userType: user.userType }, process.env.ACCESS_TOKEN_SECRET, {
+        expiresIn: '1h',
+      });
+      console.log('Generated Token:', token);
+     
+      // Log the user login response
+      console.log('User login successful:', { username: user.username, token });
+      console.log('Generated Token:', token);
+
+      res.json({ token, username: user.username, userId: user._id });
     } else {
-      return done(null, false, { message: 'Invalid username or password' });
+      res.status(401).json({ message: 'Invalid username or password' });
     }
   } catch (err) {
-    return done(err);
+    console.error(err);
+    res.status(500).json({ message: 'Database error' });
   }
-}));
-
-// Configure Passport with JwtStrategy
-passport.use(new JwtStrategy({
-  jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
-  secretOrKey: process.env.ACCESS_TOKEN_SECRET,
-}, (jwtPayload, done) => {
-  return done(null, jwtPayload);
-}));
-
-// Login route using Passport LocalStrategy
-router.post('/', passport.authenticate('local'), (req, res) => {
-  const token = jwt.sign({ username: req.user.username }, process.env.ACCESS_TOKEN_SECRET, {
-    expiresIn: '1h',
-  });
-
-  res.json({ token, username: req.user.username, userId: req.user._id });
 });
 
 module.exports = router;

@@ -22,24 +22,26 @@ const handleNewUser = async (req, res) => {
     middleName,
     lastName,
     email,
-    userName,
+    username,
     password,
     phoneNumber,
     userType,
   } = req.body;
 
   if (
-    !userName ||
-    password ||
+    !username ||
+    !password ||
     !firstName ||
-    middleName ||
-    lastName ||
+    !middleName ||
+    !lastName ||
     !email ||
-    !phoneNumber
+    !phoneNumber ||
+    !userType
   ) {
     return res.status(400).json({ message: "All fields are required" });
   }
   console.log("entry", req.body);
+  console.log('Confirm Data:', req.body);
   let client; // Declare client outside of the try block
 
   try {
@@ -47,7 +49,7 @@ const handleNewUser = async (req, res) => {
     client = initializedClient; // Assign the initialized client to the outer client variable
 
     // Check for duplicates in the database
-    const duplicate = await kcc.users.findOne({ userName: userName });
+    const duplicate = await kcc.users.findOne({ username: username });
     if (duplicate) {
       return res.status(409).json({ message: "Username already exists" });
     }
@@ -61,7 +63,7 @@ const handleNewUser = async (req, res) => {
       middleName: middleName,
       lastName: lastName,
       email: email,
-      username: userName,
+      username: username,
       password: hashedPwd,
       phoneNumber: phoneNumber,
       userType: userType,
@@ -77,9 +79,10 @@ const handleNewUser = async (req, res) => {
         middleName,
         lastName,
         email,
-        userName,
+        username,
         phoneNumber,
         userType,
+        password,
       },
     ];
     res.status(201).json(newUserArray);

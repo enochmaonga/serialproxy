@@ -5,7 +5,7 @@ const cors = require('cors');
 require('dotenv').config();
 
 const app = express();
-const port = process.env.PORT || 5000;
+const port = process.env.PORT || 5001;
 
 const { MongoClient } = require("mongodb");
 
@@ -29,9 +29,11 @@ const Submission = mongoose.model('Submission', submissionSchema, 'form');
 
 // Define routes
 app.use("/newEntry", require("./routes/newEntry"));
-app.use("/formcontent", require("./routes/formcontent"));
+app.use("/form", require("./routes/form"));
 app.use("/login", require("./routes/login"));
 app.use("/users", require("./routes/users"));
+app.use("/usershow", require("./routes/usershow"));
+app.use("/content", require("./routes/content"));
 app.use("/fetchusers", require("./routes/fetchusers"));
 
 
