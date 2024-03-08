@@ -13,10 +13,12 @@ const User = mongoose.model('User', {
 
 mongoose.connect('mongodb://127.0.0.1:27017/kcc', { useNewUrlParser: true, useUnifiedTopology: true });
 
+
+
 router.post('/', async (req, res) => {
   const { username, password } = req.body;
-  console.log("Login", req.body);
-  console.log('Retrieved User:', User);
+console.log("Login", req.body);
+console.log('Retrieved User:', User);
 
   try {
     // Search for the user in the database
@@ -49,6 +51,8 @@ router.post('/', async (req, res) => {
     } else {
       res.status(401).json({ message: 'Invalid username or password' });
     }
+    // console.log('Response Data:', res.json);
+    
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Database error' });

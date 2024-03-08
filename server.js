@@ -32,6 +32,8 @@ app.use("/newEntry", require("./routes/newEntry"));
 app.use("/form", require("./routes/form"));
 app.use("/login", require("./routes/login"));
 app.use("/users", require("./routes/users"));
+app.use("/delete", require("./routes/delete"));
+app.use("/deactivate", require("./routes/deactivate"));
 app.use("/usershow", require("./routes/usershow"));
 app.use("/content", require("./routes/content"));
 app.use("/fetchusers", require("./routes/fetchusers"));

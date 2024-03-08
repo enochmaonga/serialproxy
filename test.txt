@@ -7,3 +7,7 @@ GET http://localhost:5001/usershow
 
 
 GET http://localhost:5001/content
+
+####
+
+POST http://localhost:5001/user

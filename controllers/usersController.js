@@ -96,4 +96,37 @@ const handleNewUser = async (req, res) => {
   }
 };
 
-module.exports = { handleNewUser };
+
+const handleDeleteUser = async (req, res) => {
+  const { userId } = req.params;
+
+  if (!userId) {
+    return res.status(400).json({ message: "User ID is required" });
+  }
+
+  let client;
+
+  try {
+    const { client: initializedClient, kcc } = await initDB();
+    client = initializedClient;
+
+    // Check if the user exists
+    const user = await kcc.users.findOne({ _id: ObjectID(userId) });
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Delete the user
+    await kcc.users.deleteOne({ _id: ObjectID(userId) });
+
+    res.status(200).json({ message: "User deleted successfully" });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  } finally {
+    if (client) {
+      await client.close();
+    }
+  }
+};
+
+module.exports = { handleNewUser, handleDeleteUser };
