@@ -1,7 +1,7 @@
 const { MongoClient } = require('mongodb');
 const bcrypt = require('bcrypt');
 
-const uri = 'mongodb://127.0.0.1:27017/kc';
+const uri = 'mongodb+srv://maongaenoch:P6QpXaBRe8zHA5gI@cluster0.gqnfqjq.mongodb.net/kcc';
 
 async function initDB() {
   const client = new MongoClient(uri);

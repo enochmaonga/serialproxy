@@ -8,7 +8,7 @@ const jwtSecretKey = process.env.JWT_SECRET_KEY || 'default-secret-key';
 
 // Connect to MongoDB
 const dbConnection = async () => {
-  const client = new MongoClient("mongodb://127.0.0.1:27017/kcc", {
+  const client = new MongoClient("mongodb+srv://maongaenoch:P6QpXaBRe8zHA5gI@cluster0.gqnfqjq.mongodb.net/kcc", {
     useNewUrlParser: true,
     useUnifiedTopology: true,
   });

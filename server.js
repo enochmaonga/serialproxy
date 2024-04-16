@@ -49,7 +49,7 @@ app.get('/get-submissions', async (req, res) => {
     res.status(500).json({ error: 'Internal Server Error' });
   }
 });
-const url = "mongodb://127.0.0.1:27017/kcc";
+const url = "mongodb+srv://maongaenoch:P6QpXaBRe8zHA5gI@cluster0.gqnfqjq.mongodb.net/kcc";
 
 const client = new MongoClient(url);
 
@@ -63,8 +63,8 @@ async function connectToMongoDB() {
       app.locals.db = client.db();
   
       // Start your Express server after connecting to MongoDB
-      app.listen(port, () => {
-        console.log(`kcc listening at http://localhost:${port}`);
+      app.listen(port, '0.0.0.0', () => {
+        console.log(`kcc listening at http://0.0.0.0:${port}`);
       });
     } catch (error) {
       console.error("Error connecting to MongoDB", error);
