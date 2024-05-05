@@ -1,6 +1,6 @@
 const express = require("express");
 const { MongoClient } = require("mongodb");
-const bcrypt = require("bcrypt");
+const bcryptjs = require("bcryptjs");
 
 const uri = "mongodb+srv://maongaenoch:P6QpXaBRe8zHA5gI@cluster0.gqnfqjq.mongodb.net/kcc";
 
@@ -55,7 +55,7 @@ const handleNewUser = async (req, res) => {
     }
 
     // Encrypt the password
-    const hashedPwd = await bcrypt.hash(password, 10);
+    const hashedPwd = await bcryptjs.hash(password, 10);
 
     // Store the new user with the hashed password
     const newUser = {

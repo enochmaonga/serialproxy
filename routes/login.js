@@ -2,7 +2,7 @@ const express = require('express');
 const jwt = require('jsonwebtoken');
 const router = express.Router();
 const mongoose = require('mongoose');
-const bcrypt = require('bcrypt');
+const bcryptjs = require('bcryptjs');
 
 // Define a Mongoose model for your user collection
 const User = mongoose.model('User', {
@@ -31,7 +31,7 @@ console.log('Retrieved User:', User);
     }
 
     // Check if the provided password matches the stored hashed password
-    const passwordMatch = await bcrypt.compare(password, user.password);
+    const passwordMatch = await bcryptjs.compare(password, user.password);
     console.log('Entered Password:', password);
     console.log('Stored Password:', user.password);
     console.log('Password Match:', passwordMatch);
