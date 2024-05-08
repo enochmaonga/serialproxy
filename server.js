@@ -38,6 +38,10 @@ app.use("/usershow", require("./routes/usershow"));
 app.use("/content", require("./routes/content"));
 app.use("/fetchusers", require("./routes/fetchusers"));
 
+app.get('/', (req, res) => {
+  res.send('Hello, Render! Your server is up and running.');
+});
+
 
 console.log('New entry confirmed' );
 
@@ -49,6 +53,7 @@ app.get('/get-submissions', async (req, res) => {
     res.status(500).json({ error: 'Internal Server Error' });
   }
 });
+
 const url = "mongodb+srv://maongaenoch:P6QpXaBRe8zHA5gI@cluster0.gqnfqjq.mongodb.net/kcc";
 
 const client = new MongoClient(url);
