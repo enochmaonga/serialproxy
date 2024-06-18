@@ -5,12 +5,16 @@ const cors = require('cors');
 require('dotenv').config();
 
 const app = express();
+
+
 const port = process.env.PORT || 5001;
 
 const { MongoClient } = require("mongodb");
 
 // Use cors middleware
-app.use(cors());
+app.use(cors({
+  origin: 'https://mform-orpin.vercel.app',
+}));
 
 // Body parser middleware
 app.use(bodyParser.json());
@@ -37,6 +41,7 @@ app.use("/deactivate", require("./routes/deactivate"));
 app.use("/usershow", require("./routes/usershow"));
 app.use("/content", require("./routes/content"));
 app.use("/fetchusers", require("./routes/fetchusers"));
+app.use("/newCars", require("./routes/newCars"));
 
 app.get('/', (req, res) => {
   res.send('Hello, Render! Your server is up and running.');
