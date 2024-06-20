@@ -47,6 +47,7 @@ app.use("/usershow", require("./routes/usershow"));
 app.use("/content", require("./routes/content"));
 app.use("/fetchusers", require("./routes/fetchusers"));
 app.use("/newCars", require("./routes/newCars"));
+app.use("/cars", require("./routes/cars"));
 
 app.get('/', (req, res) => {
   res.send('Hello, Render! Your server is up and running.');
