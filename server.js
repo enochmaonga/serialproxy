@@ -14,13 +14,13 @@ const { MongoClient } = require("mongodb");
 // Use cors middleware
 
 // CORS configuration
-app.use(cors({
-  origin: 'https://mform-orpin.vercel.app',
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: true
-}));
-// app.use(cors());
+// app.use(cors({
+//   origin: 'https://mform-orpin.vercel.app',
+//   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+//   allowedHeaders: ['Content-Type', 'Authorization'],
+//   credentials: true
+// }));
+app.use(cors());
 // Body parser middleware
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
