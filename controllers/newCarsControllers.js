@@ -107,7 +107,7 @@ const handleNewCars = async (req, res) => {
       await client.close();
     }
   }
-  console.log("Handle New Cars", err.message);
+  // console.log("Handle New Cars", err.message);
 };
 
 module.exports = { handleNewCars };

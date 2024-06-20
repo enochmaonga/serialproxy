@@ -12,10 +12,15 @@ const port = process.env.PORT || 5001;
 const { MongoClient } = require("mongodb");
 
 // Use cors middleware
-app.use(cors({
-  origin: 'https://mform-orpin.vercel.app',
-}));
 
+// CORS configuration
+// app.use(cors({
+//   origin: 'https://mform-orpin.vercel.app',
+//   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+//   allowedHeaders: ['Content-Type', 'Authorization'],
+//   credentials: true
+// }));
+app.use(cors());
 // Body parser middleware
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
