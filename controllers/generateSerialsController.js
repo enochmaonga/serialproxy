@@ -25,7 +25,7 @@ const generateSerials = async (req, res) => {
   const end = parseInt(req.body.endSerial, 10);
 
   const generatedSerials = Array.from({ length: end - start + 1 }, (_, i) =>
-    sprintf("%017d", start + i)
+    sprintf("%018d", start + i)
   );
 
   if (!denomination || !Array.isArray(serials) || serials.length === 0) {
