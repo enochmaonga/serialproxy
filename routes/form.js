@@ -64,7 +64,7 @@ router.get("/", authenticate, async (req, res) => {
       res.status(404).json({ error: "No Data" });
     }
   } catch (error) {
-    console.error("Error retrieving Spares items:", error);
+    console.error("Error retrieving items:", error);
     res.status(500).json({ error: "Failed to retrieve spares items" });
   }
 });
