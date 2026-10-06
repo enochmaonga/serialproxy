@@ -1,116 +1,96 @@
-const { MongoClient } = require("mongodb");
+const { getDb } = require("../config/db");
 
-const uri =
-  "mongodb+srv://maongaenoch:P6QpXaBRe8zHA5gI@cluster0.gqnfqjq.mongodb.net/kcc";
+/**
+ * Validate and normalize Kenyan / general phone numbers
+ */
+const validatePhoneNumber = (phone) => {
+  if (!phone || typeof phone !== "string") return null;
+  const cleaned = phone.replace(/[\s\-\(\)]/g, "");
 
-let cachedClient = null;
-
-async function initDB() {
-  if (cachedClient) {
-    console.log("Reusing existing MongoDB connection");
-    return {
-      client: cachedClient,
-      kcc: {
-        airtime: cachedClient.db("kcc").collection("airtime"),
-        serials: cachedClient.db("kcc").collection("serials"),
-      },
-    };
+  // Match 07XXXXXXXX, 01XXXXXXXX, 2547XXXXXXXX, +254..., or general 9-13 digit phone numbers
+  const regex = /^(\+?254|0)[17]\d{8}$|^\d{9,13}$/;
+  if (!regex.test(cleaned)) {
+    return null;
   }
-
-  try {
-    const client = new MongoClient(uri);
-    await client.connect();
-    console.log("MongoDB connection established");
-    cachedClient = client;
-
-    const database = client.db("kcc");
-    return {
-      client,
-      kcc: {
-        airtime: database.collection("airtime"),
-        serials: database.collection("serials"),
-      },
-    };
-  } catch (error) {
-    console.error("Error connecting to MongoDB:", error.message);
-    throw new Error("Database connection failed");
-  }
-}
+  return cleaned;
+};
 
 const handleNewCars = async (req, res) => {
   const { phoneNumber, denomination } = req.body;
 
   if (!phoneNumber || !denomination) {
-    return res
-      .status(400)
-      .json({ message: "Phone number and denomination are required" });
+    return res.status(400).json({
+      success: false,
+      message: "Phone number and denomination are required",
+    });
   }
 
-  let client;
+  const normalizedPhone = validatePhoneNumber(phoneNumber);
+  if (!normalizedPhone) {
+    return res.status(400).json({
+      success: false,
+      message: "Invalid phone number format. Please provide a valid phone number (e.g. 0712345678 or 254712345678).",
+    });
+  }
 
   try {
-    const { client: initializedClient, kcc } = await initDB();
-    client = initializedClient;
+    const db = getDb();
+    const serialsCollection = db.collection("serials");
+    const airtimeCollection = db.collection("airtime");
 
-    // Ensure denominationValue is a string to match the database schema
-    const denominationValue =
-      typeof denomination === "string" ? denomination : denomination.toString();
+    const denominationValue = String(denomination).trim();
 
-    // Find one serial
-    const serialData = await kcc.serials.findOne({
-      denomination: denominationValue, // Match the type in the database
+    // Concurrency-safe: Atomically find and remove one serial matching the denomination
+    const result = await serialsCollection.findOneAndDelete({
+      denomination: denominationValue,
     });
 
-    console.log("Query Parameters:", { denominationValue });
-    console.log("Serial Data:", serialData);
+    const serialData = result && result.value !== undefined ? result.value : result;
 
     if (!serialData) {
-      return res
-        .status(404)
-        .json({ message: `No available serials found for this denomination` });
-    }
-    if (serialData) {
-      const { deletedCount } = await kcc.serials.deleteOne({
-        _id: serialData._id,
+      return res.status(404).json({
+        success: false,
+        message: `No available serials found for denomination Ksh ${denominationValue}. Please upload more serials.`,
       });
-      if (deletedCount === 1) {
-        console.log("Serial successfully deleted from serials collection");
-      } else {
-        console.warn("Unexpected deletion count:", deletedCount);
-      }
     }
+
     const airtime = {
       serial: serialData.serial,
-      denomination: denominationValue, // Keep this consistent as a string
-      phoneNumber,
+      denomination: denominationValue,
+      phoneNumber: normalizedPhone,
       createdAt: new Date(),
     };
 
-    // Check for duplicate record
-    const existingEntry = await kcc.airtime.findOne({
+    // Check for duplicate issuance of identical serial & phone combination
+    const existingEntry = await airtimeCollection.findOne({
       serial: airtime.serial,
       phoneNumber: airtime.phoneNumber,
     });
 
     if (existingEntry) {
-      return res.status(400).json({ message: "Duplicate record detected" });
+      // Put serial back in pool if duplicate airtime record exists
+      await serialsCollection.insertOne(serialData);
+      return res.status(409).json({
+        success: false,
+        message: "Duplicate record detected for this phone number and serial.",
+      });
     }
 
-    // Insert the serial into the `airtime` collection
-    await kcc.airtime.insertOne(airtime);
+    // Insert the serial into the airtime collection
+    await airtimeCollection.insertOne(airtime);
 
     res.status(201).json({
       success: true,
       data: airtime,
-      message: "Airtime entry created successfully",
+      message: `Serial ${serialData.serial} successfully assigned to ${normalizedPhone}`,
     });
   } catch (err) {
-    console.error("Error processing new airtime entry:", err.message);
-    res.status(500).json({ message: "Internal server error" });
-  } finally {
-    if (client && !cachedClient) {
-      await client.close();
-    }
+    console.error("Error processing new airtime entry:", err);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error during serial issuance",
+      error: err.message,
+    });
   }
 };
 

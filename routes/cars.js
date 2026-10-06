@@ -1,21 +1,19 @@
 const express = require("express");
 const router = express.Router();
-const { MongoClient } = require("mongodb");
+const { getDb } = require("../config/db");
+const verifyJWT = require("../middleware/verifyJWT");
+const requireAdmin = require("../middleware/requireAdmin");
 
-router.get("/", async (req, res) => {
-  const db = req.app.locals.db; // Access the MongoDB database
-  const airtimeCollection = db.collection("airtime");
-
+// Only Admin can view audit reports / entered airtime data
+router.get("/", verifyJWT, requireAdmin, async (req, res) => {
   try {
+    const db = req.app.locals.db || getDb();
+    const airtimeCollection = db.collection("airtime");
     const airtime = await airtimeCollection.find().toArray();
 
-    if (airtime && Array.isArray(airtime)) {
-      res.json(airtime);
-    } else {
-      res.status(404).json({ error: "No data found" });
-    }
+    res.json(airtime || []);
   } catch (error) {
-    console.error("Error retrieving users:", error);
+    console.error("Error retrieving airtime:", error);
     res.status(500).json({ error: "Failed to retrieve data" });
   }
 });

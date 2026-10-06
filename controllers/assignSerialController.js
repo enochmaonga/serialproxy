@@ -1,25 +1,7 @@
-const { MongoClient } = require("mongodb");
+const { getDb } = require("../config/db");
 
-const uri =
-  "mongodb+srv://maongaenoch:P6QpXaBRe8zHA5gI@cluster0.gqnfqjq.mongodb.net/kcc";
-
-async function initDB() {
-  const client = new MongoClient(uri);
-  await client.connect();
-  console.log("MongoDB connection established");
-
-  const database = client.db("kcc");
-  return {
-    client,
-    kcc: {
-      serials: database.collection("serials"),
-      airtime: database.collection("airtime"),
-    },
-  };
-}
-
-const isEntryDuplicate = async (kcc, airtime) => {
-  const existingEntry = await kcc.airtime.findOne({
+const isEntryDuplicate = async (db, airtime) => {
+  const existingEntry = await db.collection("airtime").findOne({
     serialNumber: airtime.serialNumber,
     phoneNumber: airtime.phoneNumber,
   });
@@ -34,29 +16,31 @@ const selectSerialAndMoveToAirtime = async (req, res) => {
     return res.status(400).json({ message: "Invalid input data" });
   }
 
-  let client;
-
   try {
-    const { client: initializedClient, kcc } = await initDB();
-    client = initializedClient;
+    const db = getDb();
+    const serialsCollection = db.collection("serials");
+    const airtimeCollection = db.collection("airtime");
 
-    // Find a serial number by denomination
-    const serialEntry = await kcc.serials.findOneAndUpdate(
+    // Find a serial number by denomination and pop the first serial
+    const result = await serialsCollection.findOneAndUpdate(
       {
         denomination: denomination,
         serials: { $exists: true, $not: { $size: 0 } },
       },
-      { $pop: { serials: -1 } }, // Pop the first serial from the array
+      { $pop: { serials: -1 } },
       { returnDocument: "after" }
     );
 
-    if (!serialEntry.value) {
+    // Support both Driver 4/5 ({ value: doc }) and Driver 6 (doc) return shapes
+    const updatedDoc = result && result.value !== undefined ? result.value : result;
+
+    if (!updatedDoc || !updatedDoc.serials || updatedDoc.serials.length === 0) {
       return res
         .status(404)
         .json({ message: "No serials available for this denomination" });
     }
 
-    const serialToMove = serialEntry.value.serials[0];
+    const serialToMove = updatedDoc.serials[0];
 
     const airtimeEntry = {
       phoneNumber,
@@ -65,7 +49,7 @@ const selectSerialAndMoveToAirtime = async (req, res) => {
       createdAt: new Date(),
     };
 
-    const isDuplicated = await isEntryDuplicate(kcc, airtimeEntry);
+    const isDuplicated = await isEntryDuplicate(db, airtimeEntry);
     if (isDuplicated) {
       return res.status(400).json({
         success: false,
@@ -74,7 +58,7 @@ const selectSerialAndMoveToAirtime = async (req, res) => {
     }
 
     // Insert the serial into the airtime collection
-    await kcc.airtime.insertOne(airtimeEntry);
+    await airtimeCollection.insertOne(airtimeEntry);
     console.log("Serial moved to airtime collection");
 
     // Respond with success
@@ -89,10 +73,6 @@ const selectSerialAndMoveToAirtime = async (req, res) => {
       success: false,
       message: "Failed to process serial",
     });
-  } finally {
-    if (client) {
-      await client.close();
-    }
   }
 };
 

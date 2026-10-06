@@ -1,19 +1,18 @@
 const express = require("express");
 const router = express.Router();
-const { MongoClient } = require("mongodb");
+const { getDb } = require("../config/db");
 
 router.get("/", async (req, res) => {
-  const db = req.app.locals.db;
-  const serialsCollection = db.collection("serials");
-
   try {
-    // Aggregate serials grouped by denomination
+    const db = req.app.locals.db || getDb();
+    const serialsCollection = db.collection("serials");
+
     const groupedData = await serialsCollection
       .aggregate([
         {
           $group: {
-            _id: "$denomination", // Group by denomination
-            serials: { $push: "$serial" }, // Collect all serials under the denomination
+            _id: "$denomination",
+            serials: { $push: "$serial" },
           },
         },
         {
@@ -26,7 +25,7 @@ router.get("/", async (req, res) => {
       ])
       .toArray();
 
-    res.json({ denominations: groupedData });
+    res.json({ denominations: groupedData || [] });
   } catch (error) {
     console.error("Error retrieving serials:", error);
     res.status(500).json({ error: "Failed to retrieve data" });

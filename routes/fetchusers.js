@@ -1,21 +1,21 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const { MongoClient } = require("mongodb");
+const { getDb } = require("../config/db");
+const verifyJWT = require("../middleware/verifyJWT");
+const requireAdmin = require("../middleware/requireAdmin");
 
-router.get('/', async (req, res) => {
+// Only Admin can fetch the list of users
+router.get("/", verifyJWT, requireAdmin, async (req, res) => {
   try {
-    const db = req.app.locals.db; // Access the MongoDB database from app.locals
+    const db = req.app.locals.db || getDb();
+    const usersCollection = db.collection("users");
+    // Exclude password hash from response
+    const users = await usersCollection.find({}, { projection: { password: 0 } }).toArray();
 
-    // Assuming 'users' is the collection name
-    const usersCollection = db.collection('users');
-    
-    // Fetch all users from the collection
-    const users = await usersCollection.find().toArray();
-
-    res.json(users);
+    res.json(users || []);
   } catch (error) {
-    console.error("Error fetching users", error);
-    res.status(500).json({ error: 'Internal Server Error' });
+    console.error("Error fetching users:", error);
+    res.status(500).json({ error: "Internal Server Error" });
   }
 });
 

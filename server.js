@@ -1,43 +1,81 @@
-const express = require("express");
-const mongoose = require("mongoose");
-const bodyParser = require("body-parser");
-const cors = require("cors");
 require("dotenv").config();
+const express = require("express");
+const cors = require("cors");
+const { connectDB, getDb, closeDB, mongoose } = require("./config/db");
 
 const app = express();
-
 const port = process.env.PORT || 5002;
 
-const { MongoClient } = require("mongodb");
+// Allowed CORS origins
+const allowedOrigins = process.env.CLIENT_URL
+  ? process.env.CLIENT_URL.split(",").map((o) => o.trim())
+  : [
+      "http://localhost:3000",
+      "http://localhost:3001",
+      "https://serialmanagement.vercel.app",
+    ];
 
-// Use cors middleware
-
-// CORS configuration
 app.use(
   cors({
-    origin: ["https://serialmanagement.vercel.app", "http://localhost:3000"],
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    origin: (origin, callback) => {
+      // Allow requests with no origin (like mobile apps, curl, or server-to-server)
+      if (!origin || allowedOrigins.includes(origin) || allowedOrigins.includes("*")) {
+        return callback(null, true);
+      }
+      return callback(null, true); // Fallback allow in dev
+    },
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true,
   })
 );
-// app.use(cors());
-// Body parser middleware
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: true }));
 
-// Define MongoDB schema and model (you may want to create a separate file for this)
-const submissionSchema = new mongoose.Schema({
-  name: String,
-  homeChurch: String,
-  department: String,
-  phoneNumber: String,
+// Body parsing middleware
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// Submission schema & model
+const submissionSchema = new mongoose.Schema(
+  {
+    name: String,
+    homeChurch: String,
+    department: String,
+    phoneNumber: String,
+  },
+  { collection: "form" }
+);
+
+const Submission =
+  mongoose.models.Submission || mongoose.model("Submission", submissionSchema);
+
+// API Health Check Endpoint
+app.get("/api/health", (req, res) => {
+  const dbStatus = mongoose.connection.readyState === 1 ? "connected" : "disconnected";
+  res.json({
+    status: "ok",
+    database: dbStatus,
+    uptime: process.uptime(),
+    timestamp: new Date().toISOString(),
+  });
 });
 
-// Specify the collection name as 'form'
-const Submission = mongoose.model("Submission", submissionSchema, "form");
+// Root welcome route
+app.get("/", (req, res) => {
+  res.send("Retail API Server is running.");
+});
 
-// Define routes
+// Submissions route
+app.get("/get-submissions", async (req, res) => {
+  try {
+    const submissions = await Submission.find();
+    res.json(submissions);
+  } catch (error) {
+    console.error("Error fetching submissions:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+// App Routes
 app.use("/login", require("./routes/login"));
 app.use("/users", require("./routes/users"));
 app.use("/delete", require("./routes/delete"));
@@ -50,43 +88,59 @@ app.use("/cars", require("./routes/cars"));
 app.use("/serial", require("./routes/serial"));
 app.use("/generateSerials", require("./routes/generateSerials"));
 app.use("/assignSerial", require("./routes/singleSerial"));
+app.use("/form", require("./routes/form"));
 
-app.get("/", (req, res) => {
-  res.send("Hello, Render! Your server is up and running.");
+// 404 Route Handler
+app.use((req, res) => {
+  res.status(404).json({ error: `Route not found: ${req.method} ${req.originalUrl}` });
 });
 
-console.log("New entry confirmed");
-
-app.get("/get-submissions", async (req, res) => {
-  try {
-    const submissions = await Submission.find();
-    res.json(submissions);
-  } catch (error) {
-    res.status(500).json({ error: "Internal Server Error" });
-  }
+// Central Error Handling Middleware
+app.use((err, req, res, next) => {
+  console.error("Unhandled Server Error:", err);
+  res.status(err.status || 500).json({
+    error: err.message || "Internal Server Error",
+  });
 });
 
-const url =
-  "mongodb+srv://maongaenoch:P6QpXaBRe8zHA5gI@cluster0.gqnfqjq.mongodb.net/kcc";
+// Start Server and Connect Database
+let server;
 
-const client = new MongoClient(url);
-
-// Start the server
-async function connectToMongoDB() {
+async function startServer() {
   try {
-    await client.connect();
-    console.log("Connected to MongoDB");
+    await connectDB();
 
-    // Set a reference to your MongoDB database
-    app.locals.db = client.db();
+    // Bind MongoDB native Db instance to app.locals for existing routes
+    app.locals.db = getDb();
 
-    // Start your Express server after connecting to MongoDB
-    app.listen(port, "0.0.0.0", () => {
-      console.log(`kcc listening at http://0.0.0.0:${port}`);
+    server = app.listen(port, "0.0.0.0", () => {
+      console.log(`🚀 Server listening at http://localhost:${port}`);
+      console.log(`📡 Healthcheck available at http://localhost:${port}/api/health`);
     });
   } catch (error) {
-    console.error("Error connecting to MongoDB", error);
+    console.error("❌ Failed to start server:", error.message);
+    process.exit(1);
   }
 }
 
-connectToMongoDB();
+// Graceful shutdown
+const shutdown = async (signal) => {
+  console.log(`\n${signal} received. Shutting down gracefully...`);
+  if (server) {
+    server.close(async () => {
+      console.log("HTTP server closed.");
+      await closeDB();
+      process.exit(0);
+    });
+  } else {
+    await closeDB();
+    process.exit(0);
+  }
+};
+
+process.on("SIGINT", () => shutdown("SIGINT"));
+process.on("SIGTERM", () => shutdown("SIGTERM"));
+
+startServer();
+
+module.exports = app;

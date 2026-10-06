@@ -1,29 +1,25 @@
-const passport = require("passport");
-const JwtStrategy = require("passport-jwt").Strategy;
-const ExtractJwt = require("passport-jwt").ExtractJwt;
-require("dotenv").config();
+const jwt = require("jsonwebtoken");
 
-const options = {
-  jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
-  secretOrKey: process.env.ACCESS_TOKEN_SECRET,
-};
+/**
+ * Express middleware to verify JWT Authorization Bearer token
+ */
+const verifyJWT = (req, res, next) => {
+  const authHeader = req.headers.authorization || req.headers.Authorization;
 
-passport.use(
-  new JwtStrategy(options, (jwt_payload, done) => {
-    // Check if the user exists in your database
-    // You might want to replace this with your own database logic
-    const user = getUserFromDatabase(jwt_payload.username);
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return res.status(401).json({ error: "Unauthorized: Missing or invalid token format" });
+  }
 
-    if (user) {
-      return done(null, user);
-    } else {
-      return done(null, false);
-      // You can also handle the case where the user is not found in your database
-      // For example, you might want to return res.status(401).json({ message: 'User not found' });
+  const token = authHeader.split(" ")[1];
+  const secret = process.env.ACCESS_TOKEN_SECRET || process.env.JWT_SECRET_KEY || "default_jwt_secret";
+
+  jwt.verify(token, secret, (err, decoded) => {
+    if (err) {
+      return res.status(403).json({ error: "Forbidden: Invalid or expired token" });
     }
-  })
-);
-
-const verifyJWT = passport.authenticate("jwt");
+    req.user = decoded;
+    next();
+  });
+};
 
 module.exports = verifyJWT;
