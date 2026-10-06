@@ -16,7 +16,7 @@ const validatePhoneNumber = (phone) => {
 };
 
 const handleNewCars = async (req, res) => {
-  const { phoneNumber, denomination } = req.body;
+  const { phoneNumber, denomination, serial: requestedSerial, serialNumber } = req.body;
 
   if (!phoneNumber || !denomination) {
     return res.status(400).json({
@@ -39,15 +39,25 @@ const handleNewCars = async (req, res) => {
     const airtimeCollection = db.collection("airtime");
 
     const denominationValue = String(denomination).trim();
+    const targetSerial = (requestedSerial || serialNumber || "").trim();
 
-    // Concurrency-safe: Atomically find and remove one serial matching the denomination
-    const result = await serialsCollection.findOneAndDelete({
-      denomination: denominationValue,
-    });
+    // Query for the specific selected serial or any available for denomination
+    const query = { denomination: denominationValue };
+    if (targetSerial) {
+      query.serial = targetSerial;
+    }
 
+    // Concurrency-safe: Atomically find and knock out the serial from inventory
+    const result = await serialsCollection.findOneAndDelete(query);
     const serialData = result && result.value !== undefined ? result.value : result;
 
     if (!serialData) {
+      if (targetSerial) {
+        return res.status(404).json({
+          success: false,
+          message: `Serial number ${targetSerial} is no longer available in inventory or has already been issued. Please pick another serial.`,
+        });
+      }
       return res.status(404).json({
         success: false,
         message: `No available serials found for denomination Ksh ${denominationValue}. Please upload more serials.`,
