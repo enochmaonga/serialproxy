@@ -113,6 +113,10 @@ async function startServer() {
     // Bind MongoDB native Db instance to app.locals for existing routes
     app.locals.db = getDb();
 
+    // Ensure database performance indexes
+    const { ensureAllIndexes } = require("./config/indexes");
+    await ensureAllIndexes(app.locals.db);
+
     server = app.listen(port, "0.0.0.0", () => {
       console.log(`🚀 Server listening at http://localhost:${port}`);
       console.log(`📡 Healthcheck available at http://localhost:${port}/api/health`);
