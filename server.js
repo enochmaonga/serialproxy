@@ -89,6 +89,7 @@ app.use("/serial", require("./routes/serial"));
 app.use("/generateSerials", require("./routes/generateSerials"));
 app.use("/assignSerial", require("./routes/singleSerial"));
 app.use("/form", require("./routes/form"));
+app.use("/invoices", require("./routes/invoices"));
 
 // 404 Route Handler
 app.use((req, res) => {
