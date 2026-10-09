@@ -60,7 +60,7 @@ const handleNewCars = async (req, res) => {
       }
       return res.status(404).json({
         success: false,
-        message: `No available serials found for denomination Ksh ${denominationValue}. Please upload more serials.`,
+        message: `No available serials found in database for denomination Ksh ${denominationValue}. Please upload more serials.`,
       });
     }
 

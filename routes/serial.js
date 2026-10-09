@@ -29,10 +29,31 @@ router.get("/", async (req, res) => {
         .limit(limitNum)
         .toArray();
 
+      if (totalMatching === 0 || docs.length === 0) {
+        return res.json({
+          message: denomination
+            ? `No serials found for denomination Ksh ${denomination}`
+            : "No serials found in database",
+          denomination: denomination || null,
+          total: 0,
+          serials: [],
+        });
+      }
+
       return res.json({
         denomination: denomination || null,
         total: totalMatching,
         serials: docs.map((d) => d.serial),
+      });
+    }
+
+    // Check if the database has any serials at all
+    const totalCount = await serialsCollection.countDocuments();
+    if (totalCount === 0) {
+      return res.json({
+        message: "No serials in database",
+        denominations: [],
+        total: 0,
       });
     }
 
@@ -48,6 +69,14 @@ router.get("/", async (req, res) => {
         },
       ])
       .toArray();
+
+    if (!groupedCounts || groupedCounts.length === 0) {
+      return res.json({
+        message: "No serials in database",
+        denominations: [],
+        total: 0,
+      });
+    }
 
     // 2. Concurrently fetch a fast 50-serial preview pool for each denomination
     const denominations = await Promise.all(

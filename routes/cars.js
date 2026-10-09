@@ -11,7 +11,14 @@ router.get("/", verifyJWT, requireAdmin, async (req, res) => {
     const airtimeCollection = db.collection("airtime");
     const airtime = await airtimeCollection.find().toArray();
 
-    res.json(airtime || []);
+    if (!airtime || airtime.length === 0) {
+      return res.json({
+        message: "No serials in database",
+        data: [],
+      });
+    }
+
+    res.json(airtime);
   } catch (error) {
     console.error("Error retrieving airtime:", error);
     res.status(500).json({ error: "Failed to retrieve data" });

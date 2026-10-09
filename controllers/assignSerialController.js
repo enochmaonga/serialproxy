@@ -37,7 +37,7 @@ const selectSerialAndMoveToAirtime = async (req, res) => {
     if (!updatedDoc || !updatedDoc.serials || updatedDoc.serials.length === 0) {
       return res
         .status(404)
-        .json({ message: "No serials available for this denomination" });
+        .json({ message: "No serials available in database for this denomination" });
     }
 
     const serialToMove = updatedDoc.serials[0];
