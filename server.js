@@ -4,7 +4,8 @@ const cors = require("cors");
 const { connectDB, getDb, closeDB, mongoose } = require("./config/db");
 
 const app = express();
-const port = process.env.PORT || 5002;
+// Server port configuration (5006 to avoid conflicts with other apps)
+const port = process.env.PORT || 5006;
 
 // Allowed CORS origins
 const allowedOrigins = process.env.CLIENT_URL
@@ -90,6 +91,7 @@ app.use("/generateSerials", require("./routes/generateSerials"));
 app.use("/assignSerial", require("./routes/singleSerial"));
 app.use("/form", require("./routes/form"));
 app.use("/invoices", require("./routes/invoices"));
+app.use("/products", require("./routes/products"));
 
 // 404 Route Handler
 app.use((req, res) => {

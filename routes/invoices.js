@@ -55,7 +55,13 @@ router.get("/", async (req, res) => {
     if (search && search.trim()) {
       const regex = { $regex: search.trim(), $options: "i" };
       query = {
-        $or: [{ documentNo: regex }, { customer: regex }, { shop: regex }, { contactPhone: regex }],
+        $or: [
+          { documentNo: regex },
+          { customer: regex },
+          { shop: regex },
+          { contactPhone: regex },
+          { salesPerson: regex },
+        ],
       };
     }
 
@@ -109,6 +115,7 @@ router.post("/", async (req, res) => {
       customer,
       contactName,
       contactPhone,
+      salesPerson,
       vatNo = "011324A",
       pinNo = "P051129820X",
       items = [],
@@ -132,6 +139,7 @@ router.post("/", async (req, res) => {
       customer: String(customer).trim(),
       contactName: contactName || "",
       contactPhone: contactPhone || "",
+      salesPerson: salesPerson ? String(salesPerson).trim() : "",
       vatNo: vatNo || "011324A",
       pinNo: pinNo || "P051129820X",
       items: Array.isArray(items) ? items : [],
