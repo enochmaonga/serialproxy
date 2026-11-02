@@ -43,35 +43,90 @@ router.get("/next-number", async (req, res) => {
   }
 });
 
-// GET /invoices - List saved proforma invoices
+// GET /invoices - List saved proforma invoices with search, filters & pagination
 router.get("/", async (req, res) => {
   try {
     const db = getDb();
     const invoicesCollection = db.collection("invoices");
 
-    const { search, limit = 50 } = req.query;
-    let query = {};
+    const {
+      search,
+      name,
+      customer,
+      date,
+      salesPerson,
+      page = 1,
+      limit = 10,
+    } = req.query;
 
-    if (search && search.trim()) {
-      const regex = { $regex: search.trim(), $options: "i" };
-      query = {
+    const conditions = [];
+
+    // Search by Name (customer, contactName) or Document Number
+    const nameSearch = (name || customer || search || "").trim();
+    if (nameSearch) {
+      const regex = { $regex: nameSearch, $options: "i" };
+      conditions.push({
         $or: [
-          { documentNo: regex },
           { customer: regex },
-          { shop: regex },
-          { contactPhone: regex },
-          { salesPerson: regex },
+          { contactName: regex },
+          { documentNo: regex },
         ],
-      };
+      });
     }
 
+    // Filter by Date (supports YYYY-MM-DD from HTML datepicker or DD/MM/YYYY text)
+    if (date && date.trim()) {
+      const trimmedDate = date.trim();
+      const dateOr = [{ date: { $regex: trimmedDate, $options: "i" } }];
+      if (trimmedDate.includes("-")) {
+        const parts = trimmedDate.split("-");
+        if (parts.length === 3) {
+          // e.g. 2026-11-02 -> 02/11/2026
+          const ddmmyyyy = `${parts[2]}/${parts[1]}/${parts[0]}`;
+          dateOr.push({ date: { $regex: ddmmyyyy, $options: "i" } });
+        }
+      }
+      conditions.push({ $or: dateOr });
+    }
+
+    // Filter by Sales Agent / Person
+    if (salesPerson && salesPerson.trim()) {
+      conditions.push({
+        salesPerson: { $regex: salesPerson.trim(), $options: "i" },
+      });
+    }
+
+    const query = conditions.length > 0 ? { $and: conditions } : {};
+
+    const pageNum = Math.max(1, parseInt(page, 10) || 1);
+    const limitNum = Math.max(1, Math.min(100, parseInt(limit, 10) || 10));
+    const skip = (pageNum - 1) * limitNum;
+
+    const total = await invoicesCollection.countDocuments(query);
     const invoices = await invoicesCollection
       .find(query)
       .sort({ createdAt: -1 })
-      .limit(parseInt(limit, 10) || 50)
+      .skip(skip)
+      .limit(limitNum)
       .toArray();
 
-    res.json({ success: true, invoices });
+    // Distinct list of sales persons for filtering dropdown
+    const rawSalesPersons = await invoicesCollection.distinct("salesPerson");
+    const salesPersons = (rawSalesPersons || []).filter(
+      (sp) => typeof sp === "string" && sp.trim().length > 0
+    );
+
+    res.json({
+      success: true,
+      invoices,
+      pagination: {
+        total,
+        page: pageNum,
+        limit: limitNum,
+        totalPages: Math.ceil(total / limitNum) || 1,
+      },
+      salesPersons,
+    });
   } catch (error) {
     console.error("Error fetching proforma invoices:", error);
     res.status(500).json({ success: false, error: "Failed to fetch invoices" });
@@ -112,6 +167,7 @@ router.post("/", async (req, res) => {
       documentNo,
       date,
       shop,
+      shopEmail,
       customer,
       contactName,
       contactPhone,
@@ -136,6 +192,7 @@ router.post("/", async (req, res) => {
       documentNo: String(documentNo).trim(),
       date: date || new Date().toLocaleDateString("en-GB"),
       shop: shop || "Safaricom Shop",
+      shopEmail: shopEmail ? String(shopEmail).trim() : "RetailCentreKisii@Safaricom.co.ke",
       customer: String(customer).trim(),
       contactName: contactName || "",
       contactPhone: contactPhone || "",
