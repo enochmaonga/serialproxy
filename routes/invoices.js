@@ -61,13 +61,15 @@ router.get("/", async (req, res) => {
 
     const conditions = [];
 
-    // Search by Name (customer, contactName) or Document Number
+    // Search by Name (customer, contactName, customerPin) or Document Number
     const nameSearch = (name || customer || search || "").trim();
     if (nameSearch) {
       const regex = { $regex: nameSearch, $options: "i" };
       conditions.push({
         $or: [
           { customer: regex },
+          { customerPin: regex },
+          { customerKraPin: regex },
           { contactName: regex },
           { documentNo: regex },
         ],
@@ -169,6 +171,8 @@ router.post("/", async (req, res) => {
       shop,
       shopEmail,
       customer,
+      customerPin,
+      customerKraPin,
       contactName,
       contactPhone,
       salesPerson,
@@ -194,6 +198,7 @@ router.post("/", async (req, res) => {
       shop: shop || "Safaricom Shop",
       shopEmail: shopEmail ? String(shopEmail).trim() : "RetailCentreKisii@Safaricom.co.ke",
       customer: String(customer).trim(),
+      customerPin: customerPin ? String(customerPin).trim() : (customerKraPin ? String(customerKraPin).trim() : ""),
       contactName: contactName || "",
       contactPhone: contactPhone || "",
       salesPerson: salesPerson ? String(salesPerson).trim() : "",
